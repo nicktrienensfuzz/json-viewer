@@ -45,6 +45,16 @@ const App = () => {
   const [message, setMessage] = React.useState('');
   const [linebar, setLinebar] = React.useState('');
   
+  const [socketUrl] = useState('wss://4z49eakjsl.execute-api.us-west-2.amazonaws.com/dev');
+  //const [messageHistory, setMessageHistory] = useState([]);
+
+  const {
+    sendMessage,
+    lastMessage,
+    readyState,
+  } = useWebSocket(socketUrl);
+
+
   const handleJson = useCallback(() => {
     setMessage('');
     try {
@@ -61,7 +71,7 @@ const App = () => {
         throw error;
       }
     }
-  }, [code]);
+  }, [code, sendMessage]);
 
   const formatJson = useCallback((_, replacer: number = 2) => {
     setMessage('');
@@ -90,22 +100,11 @@ const App = () => {
     handleJson()
   }, [code, handleJson]);
 
-  // wbsocket
-  const [socketUrl, setSocketUrl] = useState('wss://4z49eakjsl.execute-api.us-west-2.amazonaws.com/dev');
-  const [messageHistory, setMessageHistory] = useState([]);
-
-  const {
-    sendMessage,
-    lastMessage,
-    readyState,
-  } = useWebSocket(socketUrl);
-
   useEffect(() => {
     console.log("message: " + lastMessage?.data);
     if (lastMessage?.data) {
       let sentJson =  decodeURIComponent(JSON.parse(lastMessage?.data).body || "" );
       console.log("body: " +  sentJson);
-
 
     try {
       const obj = JSON.parse(code);
@@ -125,13 +124,13 @@ const App = () => {
     // if (lastMessage !== null) {
     //   setMessageHistory(prev => prev.concat(lastMessage));
     // }
-  }, [lastMessage, setMessageHistory]);
+  }, [lastMessage, code]);
 
-  const handleClickChangeSocketUrl = useCallback(() =>
-    setSocketUrl('wss://4z49eakjsl.execute-api.us-west-2.amazonaws.com/dev'), []);
+  // const handleClickChangeSocketUrl = useCallback(() =>
+  //   setSocketUrl('wss://4z49eakjsl.execute-api.us-west-2.amazonaws.com/dev'), []);
 
-  const handleClickSendMessage = useCallback(() => 
-   sendMessage( encodeURI(code) ), [])
+  // const handleClickSendMessage = useCallback(() => 
+  //  sendMessage( encodeURI(code) ), [])
   
 
 
