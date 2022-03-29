@@ -15,21 +15,7 @@ jobs:
 
     - run: npm install
     - run: npm run build
-    - run: npm run coverage
-    - run: cp -rp coverage/lcov-report build/
-    
-    - name: Create Coverage Badges
-      uses: jaywcjlove/coverage-badges-cli@main
-      with:
-        output: build/badges.svg
-
-    - name: Generate Contributors Images
-      uses: jaywcjlove/github-action-contributors@main
-      with:
-        filter-author: (renovate\[bot\]|renovate-bot|dependabot\[bot\])
-        output: build/CONTRIBUTORS.svg
-        avatarSize: 42
-
+   
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
       with:
