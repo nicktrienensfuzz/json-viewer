@@ -218,21 +218,8 @@ const App = () => {
                     Share
                   </button>
                 )}
-
                 {/* websocket testing */}
-                {/* <button
-                  onClick={handleClickChangeSocketUrl}
-                >
-                  Click Me to change Socket Url
-                </button>
-                <button
-                  onClick={handleClickSendMessage}
-                  disabled={readyState !== ReadyState.OPEN}
-                >
-                  Click Me to send 'Hello'
-                </button> */}
                 <span>The WebSocket is currently {connectionStatus}</span>
-                
               </div>
             </div>
           </div>
