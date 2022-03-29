@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useRef} from 'react';
+import React, { useCallback, useEffect, useRef, useState} from 'react';
 import Split from '@uiw/react-split';
-import GitHubCorners from '@uiw/react-github-corners';
 import JsonViewer from 'react-json-view';
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { json as jsonLang } from '@codemirror/lang-json';
 import { createHashHistory } from 'history';
 import styles from './App.module.css';
+import useWebSocket, { ReadyState } from 'react-use-websocket';
 
 type Parameters = {
   json?: string;
@@ -50,6 +50,7 @@ const App = () => {
     try {
       if (code) {
         const obj = JSON.parse(code);
+        sendMessage( encodeURI(code) );
         setJson(obj);
       }
     } catch (error) {
@@ -89,6 +90,62 @@ const App = () => {
     handleJson()
   }, [code, handleJson]);
 
+  // wbsocket
+  const [socketUrl, setSocketUrl] = useState('wss://4z49eakjsl.execute-api.us-west-2.amazonaws.com/dev');
+  const [messageHistory, setMessageHistory] = useState([]);
+
+  const {
+    sendMessage,
+    lastMessage,
+    readyState,
+  } = useWebSocket(socketUrl);
+
+  useEffect(() => {
+    console.log("message: " + lastMessage?.data);
+    if (lastMessage?.data) {
+      let sentJson =  decodeURIComponent(JSON.parse(lastMessage?.data).body || "" );
+      console.log("body: " +  sentJson);
+
+
+    try {
+      const obj = JSON.parse(code);
+      console.log("body: " +  sentJson);
+      if (obj && sentJson.length > 3) {
+        setCode(sentJson);
+      }
+    } catch (error) {
+        if (error instanceof Error) {
+          // setMessage(error.message);
+          // setJson(undefined)
+        } else {
+          throw error;
+        }
+      }
+    }
+    // if (lastMessage !== null) {
+    //   setMessageHistory(prev => prev.concat(lastMessage));
+    // }
+  }, [lastMessage, setMessageHistory]);
+
+  const handleClickChangeSocketUrl = useCallback(() =>
+    setSocketUrl('wss://4z49eakjsl.execute-api.us-west-2.amazonaws.com/dev'), []);
+
+  const handleClickSendMessage = useCallback(() => 
+   sendMessage( encodeURI(code) ), [])
+  
+
+
+  const connectionStatus = {
+    [ReadyState.CONNECTING]: 'Connecting',
+    [ReadyState.OPEN]: 'Open',
+    [ReadyState.CLOSING]: 'Closing',
+    [ReadyState.CLOSED]: 'Closed',
+    [ReadyState.UNINSTANTIATED]: 'Uninstantiated',
+  }[readyState];
+
+  // \ websocket
+
+  
   const editor = (
     <div style={{ minWidth: 230, width: param.view === 'editor' ? '100%' : '45%', position: 'relative', backgroundColor: 'rgb(245, 245, 245)' }}>
       <div style={{overflow: 'auto',height: '100%', boxSizing: 'border-box' }}>
@@ -161,6 +218,27 @@ const App = () => {
                     Share
                   </button>
                 )}
+
+                {/* websocket testing */}
+                {/* <button
+                  onClick={handleClickChangeSocketUrl}
+                >
+                  Click Me to change Socket Url
+                </button>
+                <button
+                  onClick={handleClickSendMessage}
+                  disabled={readyState !== ReadyState.OPEN}
+                >
+                  Click Me to send 'Hello'
+                </button> */}
+                <span>The WebSocket is currently {connectionStatus}</span>
+                {/* {lastMessage ? <span>Last message: {lastMessage.data}</span> : null}
+                <ul>
+                  {messageHistory
+                    .map((message, idx) => <span key={idx}>{message ? message.data : null}</span>)}
+                </ul> */}
+              
+
               </div>
             </div>
           </div>
