@@ -136,9 +136,6 @@ const App = () => {
   );
   return (
     <div className={styles.app}>
-      {!Number(param.corner) && (
-        <GitHubCorners fixed zIndex={999} size={43} target="__blank" href={param.cornerhref ? param.cornerhref : 'https://github.com/uiwjs/json-viewer'} />
-      )}
       <Split mode="vertical" visiable={false}>
         {param.hidenheader !== '1' && (
           <div className={styles.header} style={{  }}>
