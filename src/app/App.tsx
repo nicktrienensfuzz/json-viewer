@@ -13,6 +13,7 @@ type Parameters = {
   hidenheader?: '1' | '0';
   corner?: '1' | '0';
   view?: 'preview'| 'editor';
+  room?: string;
 }
 const history = createHashHistory();
 const getURLParameters = (url: string): Parameters =>
@@ -41,10 +42,13 @@ const App = () => {
   const cmRef = useRef<ReactCodeMirrorRef>(null);
   param.json = param.json ? decodeURI(param.json): undefined;
   const [code, setCode] = React.useState(decodeURIComponent(param.json || ''));
+  const [room] = React.useState(param.room || 'default');
   const [json, setJson] = React.useState();
   const [message, setMessage] = React.useState('');
   const [linebar, setLinebar] = React.useState('');
+  const [suppressWebSocketSend, setSuppressWebSocketSend] = React.useState(false);
   
+  const [connectionId, setConnectionId] = React.useState('');
   const [socketUrl] = useState('wss://4z49eakjsl.execute-api.us-west-2.amazonaws.com/dev');
   //const [messageHistory, setMessageHistory] = useState([]);
 
@@ -52,7 +56,13 @@ const App = () => {
     sendMessage,
     lastMessage,
     readyState,
-  } = useWebSocket(socketUrl);
+  } = useWebSocket(socketUrl, {
+    onOpen: () => { 
+      console.log('opened: '+ room)
+    },
+    //Will attempt to reconnect on all close events, such as server shutting down
+    shouldReconnect: (closeEvent) => true,
+  });
 
 
   const handleJson = useCallback(() => {
@@ -60,7 +70,9 @@ const App = () => {
     try {
       if (code) {
         const obj = JSON.parse(code);
-        sendMessage( encodeURI(code) );
+        if (!suppressWebSocketSend) {
+         sendMessage( encodeURI(code) );
+        }
         setJson(obj);
       }
     } catch (error) {
@@ -71,7 +83,7 @@ const App = () => {
         throw error;
       }
     }
-  }, [code, sendMessage]);
+  }, [code, sendMessage, suppressWebSocketSend]);
 
   const formatJson = useCallback((_, replacer: number = 2) => {
     setMessage('');
@@ -96,21 +108,35 @@ const App = () => {
     history.push(`${objectToQueryString(param)}`, { some: "state" });
   }
 
+  // editor updated
   useEffect(() => {
     handleJson()
   }, [code, handleJson]);
 
+  // recieve new message
   useEffect(() => {
-    console.log("message: " + lastMessage?.data);
+    //console.log("message: " + lastMessage?.data);
     if (lastMessage?.data) {
+      let jsonBody = JSON.parse(lastMessage?.data);
+      console.log("JSON Message: ", jsonBody);
+      if (jsonBody.connectionId) {
+        console.log(" connectionID ", jsonBody.connectionId);
+        setConnectionId(jsonBody.connectionId)
+      } else if (jsonBody.from &&  jsonBody.from === connectionId) {
+        console.log("Skip processing", jsonBody.connectionId);
+
+        return
+      }
       let sentJson =  decodeURIComponent(JSON.parse(lastMessage?.data).body || "" );
       console.log("body: " +  sentJson);
 
     try {
-      const obj = JSON.parse(code);
+      //const obj = JSON.parse(code);
       console.log("body: " +  sentJson);
-      if (obj && sentJson.length > 3) {
+      if (sentJson.length > 3) {
+        setSuppressWebSocketSend(true)
         setCode(sentJson);
+        setSuppressWebSocketSend(false)
       }
     } catch (error) {
         if (error instanceof Error) {
@@ -121,18 +147,13 @@ const App = () => {
         }
       }
     }
-    // if (lastMessage !== null) {
-    //   setMessageHistory(prev => prev.concat(lastMessage));
-    // }
-  }, [lastMessage, code]);
 
-  // const handleClickChangeSocketUrl = useCallback(() =>
-  //   setSocketUrl('wss://4z49eakjsl.execute-api.us-west-2.amazonaws.com/dev'), []);
+  }, [lastMessage, connectionId, setConnectionId, setSuppressWebSocketSend]);
 
-  // const handleClickSendMessage = useCallback(() => 
-  //  sendMessage( encodeURI(code) ), [])
-  
+  useCallback(() => {
+    console.log(readyState);
 
+  }, [readyState]);
 
   const connectionStatus = {
     [ReadyState.CONNECTING]: 'Connecting',
@@ -142,9 +163,6 @@ const App = () => {
     [ReadyState.UNINSTANTIATED]: 'Uninstantiated',
   }[readyState];
 
-  // \ websocket
-
-  
   const editor = (
     <div style={{ minWidth: 230, width: param.view === 'editor' ? '100%' : '45%', position: 'relative', backgroundColor: 'rgb(245, 245, 245)' }}>
       <div style={{overflow: 'auto',height: '100%', boxSizing: 'border-box' }}>
