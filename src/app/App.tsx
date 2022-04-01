@@ -5,7 +5,8 @@ import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { json as jsonLang } from '@codemirror/lang-json';
 import { createHashHistory } from 'history';
 import styles from './App.module.css';
-import useWebSocket, { ReadyState } from 'react-use-websocket';
+// import useWebSocket, { ReadyState } from 'react-use-websocket';
+import WebSocket from 'isomorphic-ws';
 
 type Parameters = {
   json?: string;
@@ -37,6 +38,7 @@ const objectToQueryString = (queryParameters: Parameters) => {
     : '';
 };
 
+const connection =new WebSocket('wss://4z49eakjsl.execute-api.us-west-2.amazonaws.com/dev')
 const App = () => {
   const param = getURLParameters(window.location.href);
   const cmRef = useRef<ReactCodeMirrorRef>(null);
@@ -48,42 +50,64 @@ const App = () => {
   const [linebar, setLinebar] = React.useState('');
   const [suppressWebSocketSend, setSuppressWebSocketSend] = React.useState(false);
   
+  const [connectionState, setConnectionState] = React.useState('');
   const [connectionId, setConnectionId] = React.useState('');
-  const [socketUrl] = useState('wss://4z49eakjsl.execute-api.us-west-2.amazonaws.com/dev');
-  //const [messageHistory, setMessageHistory] = useState([]);
+  //const [socketUrl] = useState('wss://4z49eakjsl.execute-api.us-west-2.amazonaws.com/dev');
+  
+  const [ws] = useState<WebSocket>(connection);
 
-  const {
-    sendMessage,
-    lastMessage,
-    readyState,
-  } = useWebSocket(socketUrl, {
-    onOpen: () => { 
-      console.log('opened: '+ room)
-    },
-    //Will attempt to reconnect on all close events, such as server shutting down
-    shouldReconnect: (closeEvent) => true,
-  });
+  useEffect(() => {
+    // let wslocal = new WebSocket(socketUrl);
+    // setWS(wslocal)
+    let wslocal = ws
+    wslocal.onopen = function open() {
+      console.log('connected');
+      setConnectionState("open")
+    };
+    
+    wslocal.onclose = function close() {
+      console.log('disconnected');
+      setConnectionState("closed")
+    };
+    wslocal.onmessage = function message(data) {
+      let messageBody: string = data.data.toString()
+      console.log('received: ', messageBody);
 
-
-  const handleJson = useCallback(() => {
-    setMessage('');
-    try {
-      if (code) {
-        const obj = JSON.parse(code);
-        if (!suppressWebSocketSend) {
-         sendMessage( encodeURI(code) );
+      if (messageBody) {
+        let jsonBody = JSON.parse(messageBody);
+        console.log("JSON Message: ", jsonBody);
+        if (jsonBody.connectionId) {
+          console.log(" connectionID ", jsonBody.connectionId);
+          setConnectionId(jsonBody.connectionId)
+        } else if (jsonBody.from &&  jsonBody.from === connectionId) {
+          console.log("Skip processing", jsonBody.connectionId);
+    
+          return
         }
-        setJson(obj);
+        let sentJson =  decodeURIComponent(JSON.parse(messageBody).body || "" );
+        console.log("body: " +  sentJson);
+    
+      try {
+        //const obj = JSON.parse(code);
+        console.log("body: " +  sentJson);
+        if (sentJson.length > 3) {
+          setSuppressWebSocketSend(true)
+          setCode(sentJson);
+          setSuppressWebSocketSend(false)
+        }
+      } catch (error) {
+          if (error instanceof Error) {
+            console.log("Error: " +  error);
+            
+            // setJson(undefined)
+          } else {
+            throw error;
+          }
+        }
       }
-    } catch (error) {
-      if (error instanceof Error) {
-        setMessage(error.message);
-        setJson(undefined)
-      } else {
-        throw error;
-      }
-    }
-  }, [code, sendMessage, suppressWebSocketSend]);
+
+    };
+  });
 
   const formatJson = useCallback((_, replacer: number = 2) => {
     setMessage('');
@@ -101,7 +125,7 @@ const App = () => {
         throw error;
       }
     }
-  }, [code]);
+  }, []);
 
   const shareJson = () => {
     param.json = encodeURI(code);
@@ -110,58 +134,30 @@ const App = () => {
 
   // editor updated
   useEffect(() => {
-    handleJson()
-  }, [code, handleJson]);
-
-  // recieve new message
-  useEffect(() => {
-    //console.log("message: " + lastMessage?.data);
-    if (lastMessage?.data) {
-      let jsonBody = JSON.parse(lastMessage?.data);
-      console.log("JSON Message: ", jsonBody);
-      if (jsonBody.connectionId) {
-        console.log(" connectionID ", jsonBody.connectionId);
-        setConnectionId(jsonBody.connectionId)
-      } else if (jsonBody.from &&  jsonBody.from === connectionId) {
-        console.log("Skip processing", jsonBody.connectionId);
-
-        return
-      }
-      let sentJson =  decodeURIComponent(JSON.parse(lastMessage?.data).body || "" );
-      console.log("body: " +  sentJson);
-
+    console.log("json: " +  code);
+    setMessage('');
     try {
-      //const obj = JSON.parse(code);
-      console.log("body: " +  sentJson);
-      if (sentJson.length > 3) {
-        setSuppressWebSocketSend(true)
-        setCode(sentJson);
-        setSuppressWebSocketSend(false)
+      if (code) {
+        const obj = JSON.parse(code);
+        if (!suppressWebSocketSend) {
+          if (ws) {  
+            console.log("sending: " +  code); 
+            ws.send( encodeURI(code))
+          }
+          
+        }
+        setJson(obj);
       }
     } catch (error) {
-        if (error instanceof Error) {
-          // setMessage(error.message);
-          // setJson(undefined)
-        } else {
-          throw error;
-        }
+      if (error instanceof Error) {
+        setMessage(error.message);
+        setJson(undefined)
+      } else {
+        throw error;
       }
     }
+  }, [code]);
 
-  }, [lastMessage, connectionId, setConnectionId, setSuppressWebSocketSend]);
-
-  useCallback(() => {
-    console.log(readyState);
-
-  }, [readyState]);
-
-  const connectionStatus = {
-    [ReadyState.CONNECTING]: 'Connecting',
-    [ReadyState.OPEN]: 'Open',
-    [ReadyState.CLOSING]: 'Closing',
-    [ReadyState.CLOSED]: 'Closed',
-    [ReadyState.UNINSTANTIATED]: 'Uninstantiated',
-  }[readyState];
 
   const editor = (
     <div style={{ minWidth: 230, width: param.view === 'editor' ? '100%' : '45%', position: 'relative', backgroundColor: 'rgb(245, 245, 245)' }}>
@@ -236,7 +232,7 @@ const App = () => {
                   </button>
                 )}
                 {/* websocket testing */}
-                <span>The WebSocket is currently {connectionStatus}</span>
+                <span>The WebSocket is currently {connectionState } in {room}</span>
               </div>
             </div>
           </div>

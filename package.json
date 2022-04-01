@@ -18,15 +18,18 @@
   "license": "MIT",
   "dependencies": {
     "@codemirror/lang-json": "~0.19.2",
+    "@d-fischer/isomorphic-ws": "^7.0.0",
     "@uiw/react-codemirror": "~4.5.1",
     "@uiw/react-copy-to-clipboard": "~4.12.2",
     "@uiw/react-github-corners": "~1.5.3",
     "@uiw/react-split": "~5.8.7",
     "history": "~5.3.0",
+    "isomorphic-ws": "^4.0.1",
     "react": "~17.0.2",
     "react-dom": "~17.0.2",
     "react-json-view": "~1.21.3",
-    "react-use-websocket": "^3.0.0"
+    "react-use-websocket": "^3.0.0",
+    "ws": "^8.5.0"
   },
   "devDependencies": {
     "@kkt/less-modules": "~7.1.1",
