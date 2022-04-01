@@ -7,7 +7,8 @@ import { createHashHistory } from 'history';
 import styles from './App.module.css';
 // import useWebSocket, { ReadyState } from 'react-use-websocket';
 import WebSocket from 'isomorphic-ws';
-// @ts-nocheck
+// @1ts-nocheck
+// eslint-disable-all react-hooks/exhaustive-deps
 type Parameters = {
   json?: string;
   cornerhref?: string;
@@ -109,7 +110,7 @@ const App = () => {
     };
   });
 
-/* @ts-ignore */
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const formatJson = useCallback((_, replacer: number = 2) => {
     setMessage('');
     try {
@@ -126,17 +127,21 @@ const App = () => {
         throw error;
       }
     }
-  }, []);
+
+  },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+   []);
 
   
-/* @ts-ignore */
+// eslint-disable-next-line react-hooks/exhaustive-deps
+
   const shareJson = () => {
     param.json = encodeURI(code);
     history.push(`${objectToQueryString(param)}`, { some: "state" });
   }
 
   // editor updated
-  /* @ts-ignore */
+  // eslint-disable react-hooks/exhaustive-deps
   useEffect(() => {
     console.log("json: " +  code);
     setMessage('');
@@ -160,7 +165,9 @@ const App = () => {
         throw error;
       }
     }
-  }, [code]);
+  }, 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  [code]);
 
 
   const editor = (
