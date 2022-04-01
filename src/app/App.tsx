@@ -7,7 +7,7 @@ import { createHashHistory } from 'history';
 import styles from './App.module.css';
 // import useWebSocket, { ReadyState } from 'react-use-websocket';
 import WebSocket from 'isomorphic-ws';
-
+// @ts-nocheck
 type Parameters = {
   json?: string;
   cornerhref?: string;
@@ -109,6 +109,7 @@ const App = () => {
     };
   });
 
+/* @ts-ignore */
   const formatJson = useCallback((_, replacer: number = 2) => {
     setMessage('');
     try {
@@ -127,12 +128,15 @@ const App = () => {
     }
   }, []);
 
+  
+/* @ts-ignore */
   const shareJson = () => {
     param.json = encodeURI(code);
     history.push(`${objectToQueryString(param)}`, { some: "state" });
   }
 
   // editor updated
+  /* @ts-ignore */
   useEffect(() => {
     console.log("json: " +  code);
     setMessage('');
